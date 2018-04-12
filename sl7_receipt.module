@@ -1,0 +1,162 @@
+<?php
+
+/**
+ * @file
+ * 	SL7 Receipt module.
+ * 
+ * @author Semyon Dragunov <sam.dragunov@gmail.com>
+ * https://github.com/SemyonDragunov
+ */
+
+define('SL7_RECEIPT_PATH', SL7_CONTROL_PANEL_ADMIN_PATH . '/payment/receipt');
+
+/**
+ * Implements hook_menu().
+ */
+function sl7_receipt_menu() {
+
+  $items[SL7_RECEIPT_PATH] = array(
+    'title' => 'Квитанция (физическое лицо)',
+    'description' => 'Настройка способа оплаты.',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('sl7_receipt_settings_form'),
+    'access arguments' => array('administer sl7_receipt'),
+  );
+
+  return $items;
+}
+
+function sl7_receipt_permission() {
+  return array(
+    'administer sl7_receipt' => array('title' => 'Управление способом оплаты'),
+  );
+}
+
+/**
+ * Implements hook_theme().
+ */
+function sl7_receipt_theme() {
+  $items = array(
+    'sl7_receipt' => array(
+      'template' => 'templates/sl7-receipt',
+      'variables' => array(
+        'order' => NULL,
+        'sum' => NULL,
+        'sum_str' => NULL,
+      ),
+    ),
+  );
+
+  foreach ($items as &$item) {
+    if (!isset($item['file'])) {
+      $item['file'] = 'templates/theme.inc';
+    }
+  }
+
+  return $items;
+}
+
+/**
+ * Implements hook_sl7_payment_info().
+ */
+function sl7_receipt_sl7_payment_info() {
+
+  $payment['sl7_receipt'] = array(
+    'title' => 'Квитанция (физическое лицо)',
+    'description' => 'Квитанция для оплаты физическим лицом.',
+    'controller' => 'SL7ReceiptPaymentController',
+    'callback' => 'sl7_receipt_callback',
+    'img' => drupal_get_path('module', 'sl7_receipt') . '/img/sl7_receipt.png',
+  );
+
+  return $payment;
+}
+
+/**
+ * Инициализация оплаты.
+ *
+ * @param $order
+ *  ID платежа или объект.
+ * @return mixed
+ */
+function sl7_receipt_callback($order) {
+  return sl7_payment_get_controller('sl7_receipt')->internal($order);
+}
+
+function sl7_receipt_settings_form($form, &$form_state) {
+
+  $form['company'] = array(
+    '#type' => 'fieldset',
+    '#title' => 'Реквизиты получателя',
+    '#collapsible' => TRUE,
+    '#collapsed' => FALSE,
+  );
+  $form['company']['sl7_receipt_company_name'] = array(
+    '#type' => 'textfield',
+    '#title' => 'Название компании',
+    '#description' => 'Полное наименование компании. Пример: <i>ООО "РогаКопыта"</i> или <i>ИП Иванов П.Н.</i>',
+    '#default_value' => variable_get('sl7_receipt_company_name'),
+    '#required' => TRUE,
+  );
+  $form['company']['sl7_receipt_company_tel'] = array(
+    '#type' => 'textfield',
+    '#title' => 'Телефон',
+    '#default_value' => variable_get('sl7_receipt_company_tel'),
+    '#maxlength' => 25,
+  );
+  $form['company']['sl7_receipt_company_inn'] = array(
+    '#type' => 'textfield',
+    '#title' => 'ИНН',
+    '#default_value' => variable_get('sl7_receipt_company_inn'),
+    '#element_validate' => array('element_validate_number'),
+    '#required' => TRUE,
+    '#maxlength' => 12,
+  );
+  $form['company']['sl7_receipt_company_kpp'] = array(
+    '#type' => 'textfield',
+    '#title' => 'КПП',
+    '#default_value' => variable_get('sl7_receipt_company_kpp'),
+    '#element_validate' => array('element_validate_number'),
+    '#required' => TRUE,
+    '#maxlength' => 9,
+  );
+
+  $form['bank'] = array(
+    '#type' => 'fieldset',
+    '#title' => 'Банковские реквизиты',
+    '#collapsible' => TRUE,
+    '#collapsed' => FALSE,
+  );
+  $form['bank']['sl7_receipt_bank_name'] = array(
+    '#type' => 'textfield',
+    '#title' => 'Название банка',
+    '#default_value' => variable_get('sl7_receipt_bank_name'),
+    '#required' => TRUE,
+  );
+  $form['bank']['sl7_receipt_bank_bik'] = array(
+    '#type' => 'textfield',
+    '#title' => 'БИК банка',
+    '#default_value' => variable_get('sl7_receipt_bank_bik'),
+    '#element_validate' => array('element_validate_number'),
+    '#required' => TRUE,
+    '#maxlength' => 9,
+  );
+  $form['bank']['sl7_receipt_bank_rs'] = array(
+    '#type' => 'textfield',
+    '#title' => 'Расчетный счет компании (Р/с)',
+    '#default_value' => variable_get('sl7_receipt_bank_rs'),
+    '#element_validate' => array('element_validate_number'),
+    '#required' => TRUE,
+    '#maxlength' => 20,
+  );
+  $form['bank']['sl7_receipt_bank_ks'] = array(
+    '#type' => 'textfield',
+    '#title' => 'Корреспондирующий счет банка (К/с)',
+    '#default_value' => variable_get('sl7_receipt_bank_ks'),
+    '#element_validate' => array('element_validate_number'),
+    '#required' => TRUE,
+    '#maxlength' => 20,
+  );
+
+  return system_settings_form($form);
+}
